@@ -1,0 +1,17 @@
+.DS_Store
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+credentials.json
+token.json
+public/imported-workouts.json
+dist/imported-workouts.json
+Email workout scraper/credentials.json
+Email workout scraper/token.json
+Email workout scraper/public/imported-workouts.json
+Email workout scraper/dist/
+Email workout scraper/node_modules/
+Email workout scraper/.git/

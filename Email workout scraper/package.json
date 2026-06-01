@@ -1,0 +1,24 @@
+{
+  "name": "vertical-jump-workout-scraper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "gmail:import": "node scripts/gmail-import.js"
+  },
+  "dependencies": {
+    "@google-cloud/local-auth": "^3.0.1",
+    "@vitejs/plugin-react": "^5.0.4",
+    "dotenv": "^17.4.2",
+    "googleapis": "^172.0.0",
+    "html-to-text": "^10.0.0",
+    "lucide-react": "^0.544.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7"
+  }
+}
