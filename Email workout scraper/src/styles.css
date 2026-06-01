@@ -200,6 +200,37 @@ p {
   font-weight: 800;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(23, 33, 27, 0.34);
+}
+
+.modal-panel {
+  display: grid;
+  width: min(460px, 100%);
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid #cfd8cf;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 24px 80px rgba(23, 33, 27, 0.22);
+}
+
+.modal-panel h2 {
+  margin: 5px 0 8px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .segmented button {
   border: 0;
   border-radius: 6px;
@@ -219,6 +250,10 @@ p {
   grid-template-columns: 320px minmax(0, 1fr);
   gap: 18px;
   align-items: start;
+}
+
+.calendar-layout {
+  display: block;
 }
 
 .sidebar-panel,
@@ -268,14 +303,22 @@ p {
 
 .calendar-day {
   display: grid;
-  grid-template-columns: 48px 54px 1fr;
+  grid-template-columns: 44px 74px minmax(0, 1fr);
   align-items: center;
-  min-height: 54px;
+  min-height: 58px;
   padding: 8px 10px;
+  gap: 8px;
 }
 
 .calendar-day strong {
-  font-size: 1.4rem;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.calendar-day small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .calendar-day.selected,
@@ -327,6 +370,96 @@ p {
   background: #fff0e7;
   color: #823d1d;
   font-weight: 800;
+}
+
+.readiness-gate {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 14px;
+  border: 1px solid #d8dfd6;
+  border-radius: 8px;
+  background: #f9fbf7;
+}
+
+.readiness-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.readiness-head h3 {
+  margin: 4px 0;
+}
+
+.readiness-head > strong {
+  min-width: 128px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #e7ede4;
+  text-align: center;
+}
+
+.readiness-go {
+  border-color: #97b88d;
+}
+
+.readiness-hold {
+  border-color: #d1bd72;
+}
+
+.readiness-caution,
+.readiness-stop {
+  border-color: #e0a07d;
+  background: #fff7f1;
+}
+
+.readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.pain-guide,
+.bucket-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pain-guide span,
+.bucket-chip {
+  border: 1px solid #d8dfd6;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.pain-guide span {
+  padding: 7px 9px;
+  color: #526057;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.bucket-strip {
+  margin: 16px 0;
+}
+
+.bucket-chip {
+  display: grid;
+  max-width: 220px;
+  gap: 3px;
+  padding: 9px 10px;
+}
+
+.bucket-chip span {
+  font-weight: 900;
+}
+
+.bucket-chip small {
+  color: #66746b;
+  line-height: 1.3;
 }
 
 .exercise-list {
@@ -462,21 +595,74 @@ select {
   max-width: 420px;
 }
 
+.calendar-panel {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #d6ded3;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.calendar-toolbar h2 {
+  margin-top: 4px;
+}
+
+.weekday-row,
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
 }
 
+.weekday-row span {
+  padding: 0 8px;
+  color: #66746b;
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .month-day {
-  min-height: 112px;
-  padding: 10px;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-height: clamp(112px, 14vw, 156px);
+  padding: 12px;
 }
 
 .month-day strong {
   display: block;
-  margin: 5px 0;
   font-size: 1.5rem;
+}
+
+.month-day span {
+  color: #66746b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.month-day.has-workout {
+  border-color: #b8ccb2;
+}
+
+.month-day.rest-day {
+  background: #f7f8f4;
+}
+
+.month-day.placeholder {
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.38);
 }
 
 .month-day small,
@@ -485,6 +671,10 @@ select {
 .upcoming-item small {
   color: #66746b;
   line-height: 1.3;
+}
+
+.month-day small {
+  overflow-wrap: anywhere;
 }
 
 .upcoming-list,
@@ -529,6 +719,62 @@ select {
   margin: 6px 0;
 }
 
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-heading h3 {
+  margin-top: 4px;
+}
+
+.sport-schedule {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #e1e7df;
+}
+
+.sport-list {
+  display: grid;
+  gap: 10px;
+}
+
+.sport-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1fr 42px;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid #d8dfd6;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.dev-area {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 4px;
+  padding: 14px;
+  border: 1px dashed #aeb8ad;
+  border-radius: 8px;
+  background: #f4f5f1;
+}
+
+.dev-area h3 {
+  margin: 4px 0;
+}
+
+.dev-area p:not(.eyebrow) {
+  max-width: 660px;
+}
+
 .save-profile {
   grid-column: 2;
   justify-self: start;
@@ -560,8 +806,14 @@ select {
   .calendar-grid,
   .session-row,
   .editor-grid,
-  .settings-grid {
+  .settings-grid,
+  .readiness-grid,
+  .sport-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sport-row .icon-button {
+    width: 100%;
   }
 
   .save-profile {
@@ -579,8 +831,28 @@ select {
   .calendar-grid,
   .session-row,
   .editor-grid,
-  .settings-grid {
+  .settings-grid,
+  .readiness-grid,
+  .sport-row {
     grid-template-columns: 1fr;
+  }
+
+  .section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dev-area {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .readiness-head {
+    flex-direction: column;
+  }
+
+  .readiness-head > strong {
+    width: 100%;
   }
 
   .segmented {
@@ -596,11 +868,34 @@ select {
     flex: 1;
   }
 
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+
   .calendar-day {
-    grid-template-columns: 42px 46px 1fr;
+    grid-template-columns: 42px 72px minmax(0, 1fr);
   }
 
   .month-day {
-    min-height: 86px;
+    min-height: 92px;
+    padding: 8px;
+  }
+
+  .weekday-row,
+  .calendar-grid {
+    gap: 5px;
+  }
+
+  .weekday-row span {
+    padding: 0 4px;
+    font-size: 0.68rem;
+  }
+
+  .month-day strong {
+    font-size: 1.15rem;
+  }
+
+  .month-day span {
+    font-size: 0.66rem;
   }
 }
