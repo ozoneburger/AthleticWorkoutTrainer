@@ -520,6 +520,10 @@ function AuthView() {
     const { data, error } = await authCall;
     setIsSending(false);
     if (error) {
+      if (mode === "password" && error.message.toLowerCase().includes("email not confirmed")) {
+        await recoverUnconfirmedAccount();
+        return;
+      }
       setMessage(error.message);
       return;
     }
@@ -530,6 +534,26 @@ function AuthView() {
       return;
     }
     setMessage("Signed in.");
+  }
+
+  async function recoverUnconfirmedAccount() {
+    setIsSending(true);
+    setMessage("Finishing account setup...");
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: window.location.origin
+      }
+    });
+    setIsSending(false);
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    setMessage(data?.session
+      ? "Account setup finished. Signed in."
+      : "This account still needs verification. Create a new account or reset the password.");
   }
 
   async function resendConfirmation() {
