@@ -448,6 +448,40 @@ function Metric({ label, value, icon }) {
   );
 }
 
+function programProgressMetrics(program) {
+  const sessions = program?.sessions ?? [];
+  const trainingSessions = sessions.filter((session) => session.exercises?.length > 0);
+  const setTotals = trainingSessions.reduce((totals, session) => {
+    session.exercises.forEach((exercise) => {
+      totals.completed += exercise.completedSets.filter(Boolean).length;
+      totals.planned += exercise.completedSets.length;
+    });
+    return totals;
+  }, { completed: 0, planned: 0 });
+  const completedSessions = trainingSessions.filter((session) => (
+    session.exercises.every((exercise) => exercise.completedSets.length > 0 && exercise.completedSets.every(Boolean))
+  ));
+  const partialSessions = trainingSessions.filter((session) => (
+    session.exercises.some((exercise) => exercise.completedSets.some(Boolean))
+    && !completedSessions.includes(session)
+  ));
+  const skippedSessions = trainingSessions.filter((session) => session.skipped);
+  const completionRate = setTotals.planned > 0 ? Math.round((setTotals.completed / setTotals.planned) * 100) : 0;
+  const lastCompleted = completedSessions
+    .slice()
+    .sort((a, b) => b.date.localeCompare(a.date))[0];
+  return {
+    completedSessions: completedSessions.length,
+    partialSessions: partialSessions.length,
+    skippedSessions: skippedSessions.length,
+    totalSessions: trainingSessions.length,
+    completedSets: setTotals.completed,
+    plannedSets: setTotals.planned,
+    completionRate,
+    lastCompletedDate: lastCompleted?.date ?? null
+  };
+}
+
 function LoadingShell({ message }) {
   return (
     <main className="app-shell">
@@ -1245,6 +1279,7 @@ function ProgramView({ program, setSelectedDate, setActiveView }) {
 
 function ProfileView({ profile, program, syncStatus, onEdit }) {
   const maxLiftEntries = Object.entries(profile.maxLifts ?? {});
+  const progress = programProgressMetrics(program);
   return (
     <section className="profile-panel">
       <div className="profile-hero">
@@ -1264,6 +1299,14 @@ function ProfileView({ profile, program, syncStatus, onEdit }) {
         <Metric label="Days / week" value={profile.trainingDaysPerWeek} icon={<CalendarDays size={18} />} />
         <Metric label="Source" value={program.sourceLabel} icon={<Dumbbell size={18} />} />
         <Metric label="Sync" value={syncStatus} icon={<Shield size={18} />} />
+      </section>
+      <section className="status-grid profile-status-grid">
+        <Metric label="Workouts completed" value={`${progress.completedSessions}/${progress.totalSessions}`} icon={<Check size={18} />} />
+        <Metric label="Sets completed" value={`${progress.completedSets}/${progress.plannedSets}`} icon={<Dumbbell size={18} />} />
+        <Metric label="Completion rate" value={`${progress.completionRate}%`} icon={<Activity size={18} />} />
+        <Metric label="In progress" value={progress.partialSessions} icon={<CalendarDays size={18} />} />
+        <Metric label="Skipped sessions" value={progress.skippedSessions} icon={<AlertTriangle size={18} />} />
+        <Metric label="Last completed" value={progress.lastCompletedDate ? formatDate(progress.lastCompletedDate) : "None yet"} icon={<Check size={18} />} />
       </section>
       <div className="profile-detail-grid">
         <section>
