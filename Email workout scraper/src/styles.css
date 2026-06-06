@@ -1,6 +1,35 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #f7f7f2;
+  --color-foreground: #151a18;
+  --color-card: #ffffff;
+  --color-card-foreground: #151a18;
+  --color-primary: #164b3a;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #e8eef2;
+  --color-secondary-foreground: #1b3340;
+  --color-muted: #eef1ea;
+  --color-muted-foreground: #68736e;
+  --color-border: #d9ded6;
+  --color-ring: #3b82a0;
+  --color-destructive: #9d3328;
+  --color-destructive-foreground: #ffffff;
+  --color-warning: #c9792f;
+  --color-warning-foreground: #6f3510;
+}
+
 :root {
   color: #17211b;
   background: #f6f7f2;
+  --surface: #ffffff;
+  --surface-soft: #f2f5ef;
+  --ink: #151a18;
+  --muted-ink: #627069;
+  --line: #d9ded6;
+  --brand: #164b3a;
+  --brand-blue: #315c72;
+  --warning: #c9792f;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,8 +42,9 @@
 body {
   margin: 0;
   min-width: 320px;
+  overflow-x: hidden;
   background:
-    linear-gradient(180deg, rgba(216, 230, 214, 0.8), rgba(246, 247, 242, 0) 360px),
+    linear-gradient(180deg, rgba(218, 229, 221, 0.95), rgba(246, 247, 242, 0) 360px),
     #f6f7f2;
 }
 
@@ -32,7 +62,7 @@ button {
 .app-shell {
   width: min(1180px, calc(100% - 28px));
   margin: 0 auto;
-  padding: 26px 0 48px;
+  padding: 18px 0 92px;
 }
 
 .topbar,
@@ -47,7 +77,7 @@ button {
 .topbar {
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 h1,
@@ -58,8 +88,8 @@ p {
 }
 
 h1 {
-  font-size: clamp(2rem, 4vw, 4.25rem);
-  line-height: 0.95;
+  font-size: clamp(2rem, 8vw, 4.25rem);
+  line-height: 1;
   letter-spacing: 0;
 }
 
@@ -115,8 +145,8 @@ p {
 }
 
 .primary-action {
-  border-color: #1f4f3d;
-  background: #1f4f3d;
+  border-color: var(--brand);
+  background: var(--brand);
   color: #fff;
 }
 
@@ -159,9 +189,9 @@ p {
   align-items: center;
   min-height: 76px;
   padding: 14px;
-  border: 1px solid #d8dfd6;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .metric-icon {
@@ -189,6 +219,44 @@ p {
   border: 1px solid #d2dbd0;
   border-radius: 8px;
   background: #e7ede4;
+}
+
+.mobile-nav {
+  position: fixed;
+  right: auto;
+  bottom: 10px;
+  left: 10px;
+  z-index: 30;
+  display: none;
+  width: calc(100vw - 20px);
+  max-width: 370px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid rgba(21, 26, 24, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 14px 40px rgba(21, 26, 24, 0.18);
+  backdrop-filter: blur(14px);
+}
+
+.mobile-nav button {
+  display: grid;
+  min-width: 0;
+  min-height: 54px;
+  place-items: center;
+  gap: 2px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #66746b;
+  font-size: 0.69rem;
+  font-weight: 800;
+}
+
+.mobile-nav .active {
+  background: #e6f1df;
+  color: var(--brand);
 }
 
 .notice {
@@ -314,6 +382,10 @@ p {
   align-items: start;
 }
 
+.layout-two > * {
+  min-width: 0;
+}
+
 .calendar-layout {
   display: block;
 }
@@ -322,8 +394,8 @@ p {
 .workout-panel,
 .settings-panel,
 .profile-panel {
-  border: 1px solid #d6ded3;
-  border-radius: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.84);
   box-shadow: 0 18px 50px rgba(40, 53, 45, 0.08);
 }
@@ -360,7 +432,7 @@ p {
 .upcoming-item,
 .session-pill {
   border: 1px solid #d8dfd6;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #fff;
   text-align: left;
 }
@@ -387,7 +459,7 @@ p {
 
 .calendar-day.selected,
 .month-day.selected {
-  border-color: #1f4f3d;
+  border-color: var(--brand);
   background: #e6f1df;
 }
 
@@ -419,7 +491,7 @@ p {
 .fatigue {
   min-width: 98px;
   padding: 10px;
-  border-radius: 8px;
+  border-radius: 10px;
   text-align: center;
   background: #edf2eb;
 }
@@ -667,15 +739,16 @@ p {
 
 .exercise-list {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   margin: 16px 0;
 }
 
 .exercise-card {
   padding: 14px;
-  border: 1px solid #d8dfd6;
-  border-radius: 8px;
-  background: #fff;
+  border-color: var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 24px rgba(21, 26, 24, 0.05);
 }
 
 .exercise-main {
@@ -686,13 +759,22 @@ p {
 
 .exercise-main h3 {
   margin: 4px 0;
+  font-size: 1.08rem;
+}
+
+.exercise-card .category {
+  display: inline-flex;
+  margin-bottom: 4px;
+  color: #315c72;
+  letter-spacing: 0;
+  text-transform: capitalize;
 }
 
 .prescription {
   min-width: 118px;
   padding: 9px 10px;
-  border-radius: 8px;
-  background: #f1f5ee;
+  border-radius: 10px;
+  background: #eef4f6;
   text-align: right;
 }
 
@@ -709,7 +791,7 @@ p {
   margin-top: 12px;
   padding: 10px;
   border: 1px solid #cfdcc8;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #f3f8ee;
 }
 
@@ -731,7 +813,7 @@ p {
 
 .set-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(42px, 42px));
+  grid-template-columns: repeat(auto-fit, minmax(44px, 44px));
   gap: 8px;
   margin: 14px 0;
 }
@@ -767,18 +849,18 @@ p {
 
 .set-chip {
   display: grid;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   border: 1px solid #cbd5ca;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #fff;
   font-weight: 900;
 }
 
 .set-chip.done {
-  border-color: #1f4f3d;
-  background: #1f4f3d;
+  border-color: var(--brand);
+  background: var(--brand);
   color: #fff;
 }
 
@@ -857,7 +939,7 @@ textarea {
 }
 
 .empty-state p {
-  max-width: 420px;
+  max-width: min(100%, 420px);
 }
 
 .calendar-panel {
@@ -1148,6 +1230,10 @@ textarea {
     position: static;
   }
 
+  .layout-two {
+    gap: 12px;
+  }
+
   .calendar-grid,
   .session-row,
   .editor-grid,
@@ -1169,8 +1255,101 @@ textarea {
 
 @media (max-width: 560px) {
   .app-shell {
-    width: min(100% - 18px, 1180px);
-    padding-top: 14px;
+    width: min(100% - 14px, 1180px);
+    padding-top: 12px;
+    padding-bottom: 104px;
+  }
+
+  .topbar {
+    margin-bottom: 10px;
+  }
+
+  .topbar h1 {
+    font-size: 2.25rem;
+  }
+
+  .segmented {
+    display: none;
+  }
+
+  .mobile-nav {
+    display: grid;
+  }
+
+  .sidebar-panel,
+  .workout-panel,
+  .settings-panel,
+  .profile-panel {
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(21, 26, 24, 0.07);
+  }
+
+  .sidebar-panel {
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.68);
+  }
+
+  .date-switcher {
+    margin-bottom: 10px;
+  }
+
+  .day-strip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scroll-snap-type: x proximity;
+  }
+
+  .calendar-day {
+    grid-template-columns: 1fr;
+    min-width: 138px;
+    min-height: 82px;
+    scroll-snap-align: start;
+  }
+
+  .calendar-day small {
+    white-space: normal;
+  }
+
+  .workout-panel,
+  .settings-panel,
+  .profile-panel {
+    padding: 14px;
+  }
+
+  .workout-header {
+    gap: 12px;
+  }
+
+  .workout-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .fatigue {
+    width: 100%;
+    text-align: left;
+  }
+
+  .exercise-main {
+    gap: 10px;
+  }
+
+  .prescription {
+    width: 100%;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .exercise-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .exercise-footer > div {
+    display: flex;
+    justify-content: space-between;
   }
 
   .status-grid,
@@ -1232,7 +1411,9 @@ textarea {
   }
 
   .calendar-day {
-    grid-template-columns: 42px 72px minmax(0, 1fr);
+    grid-template-columns: 1fr;
+    min-width: 138px;
+    min-height: 82px;
   }
 
   .month-day {
@@ -1256,5 +1437,15 @@ textarea {
 
   .month-day span {
     font-size: 0.66rem;
+  }
+
+  .empty-state {
+    min-height: 240px;
+    align-content: start;
+    padding-top: 28px;
+  }
+
+  .empty-state p {
+    max-width: 270px;
   }
 }

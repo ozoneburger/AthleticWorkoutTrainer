@@ -19,6 +19,8 @@ import {
   Trash2
 } from "lucide-react";
 import "./styles.css";
+import { Badge } from "./components/ui/badge.jsx";
+import { Card } from "./components/ui/card.jsx";
 import {
   AthleteProfile,
   Exercise,
@@ -38,6 +40,13 @@ import { SupabaseProgramRepository } from "./syncRepository.js";
 const legacyRepository = new ProgramRepository(window.localStorage);
 const service = new ProgramService(legacyRepository);
 const localImportDecisionKey = (userId) => `jump-user-${userId}:local-import-decision-v1`;
+const appViews = [
+  ["today", "Today", Activity],
+  ["calendar", "Calendar", CalendarDays],
+  ["program", "Program", Dumbbell],
+  ["profile", "Profile", Shield],
+  ["settings", "Settings", Settings]
+];
 
 function App() {
   const [repository, setRepository] = useState(() => legacyRepository);
@@ -337,13 +346,7 @@ function App() {
       {importNotice && <div className="notice">{importNotice}</div>}
 
       <nav className="segmented" aria-label="App views">
-        {[
-          ["today", "Today"],
-          ["calendar", "Calendar"],
-          ["program", "Program"],
-          ["profile", "Profile"],
-          ["settings", "Settings"]
-        ].map(([key, label]) => (
+        {appViews.map(([key, label]) => (
           <button key={key} className={activeView === key ? "active" : ""} onClick={() => setActiveView(key)}>
             {label}
           </button>
@@ -432,19 +435,27 @@ function App() {
       {showPasswordResetPrompt && (
         <PasswordResetModal onClose={() => setShowPasswordResetPrompt(false)} />
       )}
+      <nav className="mobile-nav" aria-label="Mobile app views">
+        {appViews.map(([key, label, Icon]) => (
+          <button key={key} className={activeView === key ? "active" : ""} onClick={() => setActiveView(key)}>
+            <Icon size={18} />
+            <span>{label}</span>
+          </button>
+        ))}
+      </nav>
     </main>
   );
 }
 
 function Metric({ label, value, icon }) {
   return (
-    <div className="metric">
+    <Card className="metric">
       <div className="metric-icon">{icon}</div>
       <div>
         <span>{label}</span>
         <strong>{value}</strong>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -1065,10 +1076,10 @@ function ExerciseRow({ workout, exercise, isEditing, onEdit, onClose, onToggleSe
     isDeload: workout.week === 4
   });
   return (
-    <article className="exercise-card">
+    <Card className="exercise-card">
       <div className="exercise-main">
         <div>
-          <span className="category">{exercise.category}</span>
+          <Badge variant="outline" className="category">{exercise.category}</Badge>
           <h3>{exercise.name}</h3>
           <p>{exercise.intent}</p>
         </div>
@@ -1125,7 +1136,7 @@ function ExerciseRow({ workout, exercise, isEditing, onEdit, onClose, onToggleSe
           onClose={onClose}
         />
       )}
-    </article>
+    </Card>
   );
 }
 
