@@ -32,7 +32,7 @@ import {
   formatLoadRecommendation,
   tendonPainDecision
 } from "./program.js";
-import { supabase, isSupabaseConfigured } from "./supabaseClient.js";
+import { supabase, isSupabaseConfigured, authRedirectUrl } from "./supabaseClient.js";
 import { SupabaseProgramRepository } from "./syncRepository.js";
 
 const legacyRepository = new ProgramRepository(window.localStorage);
@@ -513,7 +513,7 @@ function AuthView() {
         email,
         password,
         options: {
-          emailRedirectTo: window.location.origin
+          emailRedirectTo: authRedirectUrl
         }
       })
       : supabase.auth.signInWithPassword({ email, password });
@@ -543,7 +543,7 @@ function AuthView() {
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin
+        emailRedirectTo: authRedirectUrl
       }
     });
     setIsSending(false);
@@ -567,7 +567,7 @@ function AuthView() {
       type: "signup",
       email,
       options: {
-        emailRedirectTo: window.location.origin
+        emailRedirectTo: authRedirectUrl
       }
     });
     setIsSending(false);
@@ -581,7 +581,7 @@ function AuthView() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: window.location.origin
+        emailRedirectTo: authRedirectUrl
       }
     });
     setIsSending(false);
@@ -596,7 +596,7 @@ function AuthView() {
     setIsSending(true);
     setMessage("");
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin
+      redirectTo: authRedirectUrl
     });
     setIsSending(false);
     setMessage(error ? error.message : "Password reset email sent.");
