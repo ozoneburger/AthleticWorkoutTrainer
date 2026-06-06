@@ -1,5 +1,7 @@
 # Jump Performance Program Spec
 
+This implementation spec follows the evidence and product principles in [TRAINING_PHILOSOPHY.md](TRAINING_PHILOSOPHY.md). When future changes conflict, the philosophy document should guide the decision unless the athlete's pain/readiness data requires a more conservative adjustment.
+
 ## Purpose
 
 This app generates a jump-performance and athletic development program. It is not a bodybuilding program and not a powerlifting program.
@@ -197,4 +199,3 @@ If sessions become too long, cut in this order:
 5. Superset Accessories
 
 Performance work stays. Everything else gets cut first.
-

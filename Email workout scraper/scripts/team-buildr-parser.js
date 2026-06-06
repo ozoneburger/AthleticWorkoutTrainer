@@ -84,6 +84,15 @@ export class TeamBuildrParser {
         if (previous) previous.intensity = line.replace(/^@\s*/, "");
         return;
       }
+      if (this.isLoadInstructionLine(line)) {
+        const previous = exercises[exercises.length - 1];
+        if (previous) {
+          previous.intensity = previous.intensity && previous.intensity !== "as written"
+            ? `${previous.intensity}; ${line}`
+            : line;
+        }
+        return;
+      }
       if (REPS_ONLY_PATTERN.test(line)) {
         pendingPrescription = line;
         return;
@@ -176,6 +185,17 @@ export class TeamBuildrParser {
       /^facebook$/i,
       /^instagram$/i,
       /^google plus$/i
+    ].some((pattern) => pattern.test(line));
+  }
+
+  isLoadInstructionLine(line) {
+    return [
+      /^last\s+\w+\s+sets?\s+(?:@|at)\s+\d+(?:\.\d+)?%/i,
+      /^last\s+\w+\s+sets?\s+at\s+\d+(?:\.\d+)?%/i,
+      /^work up to\s+\d+(?:\.\d+)?\s*(?:%|lbs?|kg)?/i,
+      /^pull\s+\d+(?:\.\d+)?%\s+for\s+the\s+last\s+\w+\s+sets?/i,
+      /^with counter movement\s+@/i,
+      /^same weight as last week/i
     ].some((pattern) => pattern.test(line));
   }
 

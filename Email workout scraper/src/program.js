@@ -1,6 +1,7 @@
 const STORAGE_KEYS = {
   program: "jump-program-v1",
-  profile: "jump-profile-v1"
+  profile: "jump-profile-v1",
+  readiness: "jump-readiness-v1"
 };
 
 export const PROGRAM_PHILOSOPHY = {
@@ -30,7 +31,7 @@ export const PROGRAM_PHILOSOPHY = {
 };
 
 export class AthleteProfile {
-  constructor({ height, weight, age, sex, jumperType, constraints, trainingDaysPerWeek, blockedExercises, sportSchedule, maxLifts }) {
+  constructor({ height, weight, age, sex, jumperType, constraints, trainingDaysPerWeek, blockedExercises, sportSchedule, weightUnit, exerciseWeights, maxLifts }) {
     this.height = height;
     this.weight = weight;
     this.age = age;
@@ -40,6 +41,8 @@ export class AthleteProfile {
     this.trainingDaysPerWeek = Number(trainingDaysPerWeek);
     this.blockedExercises = blockedExercises ?? "";
     this.sportSchedule = normalizeSportSchedule(sportSchedule);
+    this.weightUnit = normalizeWeightUnit(weightUnit);
+    this.exerciseWeights = exerciseWeights ?? {};
     this.maxLifts = maxLifts;
   }
 
@@ -53,6 +56,8 @@ export class AthleteProfile {
       constraints: "Recurring right patellar tendon irritation; hip tightness.",
       trainingDaysPerWeek: 6,
       blockedExercises: "",
+      weightUnit: "kg",
+      exerciseWeights: {},
       sportSchedule: [
         { id: "sport-basketball-monday", sport: "Basketball", day: "Monday", intensity: "medium", jumpLoad: "medium" },
         { id: "sport-volleyball-tuesday", sport: "Volleyball", day: "Tuesday", intensity: "high", jumpLoad: "high" },
@@ -80,6 +85,25 @@ export class AthleteProfile {
     });
   }
 
+  withExerciseWeight(exerciseName, displayValue, unit = this.weightUnit) {
+    const value = Number(displayValue);
+    const key = exerciseWeightKey(exerciseName);
+    const nextWeights = { ...this.exerciseWeights };
+    if (!Number.isFinite(value) || value <= 0) {
+      delete nextWeights[key];
+    } else {
+      nextWeights[key] = {
+        exerciseName,
+        kg: unitToKg(value, unit),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    return AthleteProfile.fromJSON({
+      ...this.toJSON(),
+      exerciseWeights: nextWeights
+    });
+  }
+
   toJSON() {
     return {
       height: this.height,
@@ -91,13 +115,30 @@ export class AthleteProfile {
       trainingDaysPerWeek: this.trainingDaysPerWeek,
       blockedExercises: this.blockedExercises,
       sportSchedule: this.sportSchedule,
+      weightUnit: this.weightUnit,
+      exerciseWeights: this.exerciseWeights,
       maxLifts: this.maxLifts
     };
   }
 }
 
 export class Exercise {
-  constructor({ id, name, category, bucket, sets, reps, intensity, intent, completedSets }) {
+  constructor({
+    id,
+    name,
+    category,
+    bucket,
+    sets,
+    reps,
+    intensity,
+    intent,
+    completedSets,
+    loadPrescription,
+    recommendedWeightKg,
+    recommendedWeightRangeKg,
+    loadRecommendationLabel,
+    loadRecommendationSource
+  }) {
     this.id = id;
     this.name = name;
     this.category = category;
@@ -107,6 +148,11 @@ export class Exercise {
     this.intensity = intensity;
     this.intent = intent;
     this.completedSets = completedSets ?? Array.from({ length: this.sets }, () => false);
+    this.loadPrescription = loadPrescription ?? null;
+    this.recommendedWeightKg = recommendedWeightKg ?? null;
+    this.recommendedWeightRangeKg = recommendedWeightRangeKg ?? null;
+    this.loadRecommendationLabel = loadRecommendationLabel ?? "";
+    this.loadRecommendationSource = loadRecommendationSource ?? "";
   }
 
   static fromJSON(json) {
@@ -134,7 +180,12 @@ export class Exercise {
       reps: this.reps,
       intensity: this.intensity,
       intent: this.intent,
-      completedSets: this.completedSets
+      completedSets: this.completedSets,
+      loadPrescription: this.loadPrescription,
+      recommendedWeightKg: this.recommendedWeightKg,
+      recommendedWeightRangeKg: this.recommendedWeightRangeKg,
+      loadRecommendationLabel: this.loadRecommendationLabel,
+      loadRecommendationSource: this.loadRecommendationSource
     };
   }
 }
@@ -157,6 +208,9 @@ export class WorkoutSession {
     riskFlags,
     buckets,
     readinessRules,
+    skipped,
+    skipNote,
+    skippedAt,
     exercises
   }) {
     this.id = id;
@@ -175,6 +229,9 @@ export class WorkoutSession {
     this.riskFlags = riskFlags;
     this.buckets = buckets ?? bucketsFromExercises(exercises);
     this.readinessRules = readinessRules ?? defaultReadinessRules();
+    this.skipped = Boolean(skipped);
+    this.skipNote = skipNote ?? "";
+    this.skippedAt = skippedAt ?? null;
     this.exercises = exercises.map((exercise) => Exercise.fromJSON(exercise));
   }
 
@@ -217,6 +274,15 @@ export class WorkoutSession {
     return new WorkoutSession({ ...this.toJSON(), date });
   }
 
+  withSkipped(note) {
+    return new WorkoutSession({
+      ...this.toJSON(),
+      skipped: true,
+      skipNote: String(note || "").trim(),
+      skippedAt: new Date().toISOString()
+    });
+  }
+
   withSetCompletion(exerciseId, setIndex) {
     return new WorkoutSession({
       ...this.toJSON(),
@@ -242,6 +308,9 @@ export class WorkoutSession {
       riskFlags: this.riskFlags,
       buckets: this.buckets,
       readinessRules: this.readinessRules,
+      skipped: this.skipped,
+      skipNote: this.skipNote,
+      skippedAt: this.skippedAt,
       exercises: this.exercises.map((exercise) => exercise.toJSON())
     };
   }
@@ -264,7 +333,7 @@ export class TrainingProgram {
 
   upcomingFrom(date, limit) {
     return this.sessions
-      .filter((session) => session.date >= date)
+      .filter((session) => session.date >= date && !session.skipped)
       .sort((a, b) => a.date.localeCompare(b.date))
       .slice(0, limit);
   }
@@ -298,8 +367,9 @@ export class TrainingProgram {
         monthDay: new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(date),
         weekday: new Intl.DateTimeFormat("en", { weekday: "short" }).format(date),
         hasWorkout: Boolean(session),
-        title: session?.title ?? "Recovery",
-        phaseShort: session ? session.mesocycle > 0 ? `M${session.mesocycle}` : "TB" : "Rest"
+        skipped: Boolean(session?.skipped),
+        title: session?.skipped ? `Skipped: ${session.title}` : session?.title ?? "Recovery",
+        phaseShort: session?.skipped ? "Skip" : session ? session.mesocycle > 0 ? `M${session.mesocycle}` : "TB" : "Rest"
       };
     });
   }
@@ -339,6 +409,13 @@ export class TrainingProgram {
     });
   }
 
+  withSessionSkipped(sessionId, note) {
+    return new TrainingProgram({
+      ...this.toJSON(),
+      sessions: this.sessions.map((session) => session.id === sessionId ? session.withSkipped(note) : session)
+    });
+  }
+
   toJSON() {
     return {
       sourceLabel: this.sourceLabel,
@@ -349,8 +426,9 @@ export class TrainingProgram {
 }
 
 export class ProgramRepository {
-  constructor(storage) {
+  constructor(storage, namespace = "") {
     this.storage = storage;
+    this.namespace = namespace;
   }
 
   loadProgram() {
@@ -369,17 +447,33 @@ export class ProgramRepository {
     this.write(STORAGE_KEYS.profile, profile.toJSON());
   }
 
+  loadReadiness() {
+    return this.read(STORAGE_KEYS.readiness) ?? {};
+  }
+
+  saveReadiness(readiness) {
+    this.write(STORAGE_KEYS.readiness, readiness ?? {});
+  }
+
+  hasLocalData() {
+    return Boolean(this.loadProfile() || this.read(STORAGE_KEYS.program) || Object.keys(this.loadReadiness()).length > 0);
+  }
+
   read(key) {
-    const raw = this.storage.getItem(key);
+    const raw = this.storage.getItem(this.key(key));
     return raw ? JSON.parse(raw) : null;
   }
 
   write(key, value) {
-    this.storage.setItem(key, JSON.stringify(value));
+    this.storage.setItem(this.key(key), JSON.stringify(value));
   }
 
   clearProgram() {
-    this.storage.removeItem(STORAGE_KEYS.program);
+    this.storage.removeItem(this.key(STORAGE_KEYS.program));
+  }
+
+  key(key) {
+    return this.namespace ? `${this.namespace}:${key}` : key;
   }
 }
 
@@ -414,6 +508,14 @@ export class ProgramService {
 
   saveProfile(profile) {
     this.repository.saveProfile(profile);
+  }
+
+  loadReadiness() {
+    return this.repository.loadReadiness?.() ?? {};
+  }
+
+  saveReadiness(readiness) {
+    this.repository.saveReadiness?.(readiness);
   }
 
   personalizeProgram(sourceProgram, profile) {
@@ -522,6 +624,8 @@ export class ProgramPersonalizer {
       ["Paused Hang Clean", "Olympic lift", 4, "2-3", "controlled-fast", "Build positions before speed."],
       ["Faster Eccentric Hang Clean", "Olympic lift", 4, "2-3", "fast", "Velocity development."],
       ["Clean Pull", "Olympic lift", 4, "3", "fast", "High force pull without catch demand."],
+      ["High Pull", "Olympic lift", 4, "3", "fast", "Explosive hip extension without catch demand."],
+      ["Loaded Jump Squat", "power movement", 3, "3", "20% squat max", "Bridge maximal strength to jump-specific power; only pain-free."],
       ["Back Squat", "primary strength", 4, "3-5", "pain-free load", "Jump support work; do not chase numbers."],
       ["Front Squat", "primary strength", 4, "3-5", "controlled", "Upright force production."],
       ["Trap Bar Deadlift", "primary strength", 4, "3-5", "fast concentric", "Bilateral force with lower knee demand."],
@@ -554,7 +658,7 @@ export class ProgramPersonalizer {
     const isDeload = week === 4;
     const exercises = this.template(mesocycle, schedule)
       .flatMap((slot) => this.pick(library, slot, profile, isDeload, mesocycle, schedule))
-      .map((exercise, index) => this.prescribe(exercise, { mesocycle, week, isDeload, index, schedule }));
+      .map((exercise, index) => this.prescribe(exercise, { mesocycle, week, isDeload, index, schedule, profile }));
     return new WorkoutSession({
       id: `personal-m${mesocycle}-w${week}-d${sessionIndex + 1}`,
       date,
@@ -588,10 +692,14 @@ export class ProgramPersonalizer {
       ["mobility", 3]
     ];
     if (schedule.type === "jump") {
-      return [...base, ["sprint drill", 3], ["plyometric", mesocycle >= 5 ? 3 : 2], ["Olympic lift", 1], ["accessory", 1]];
+      const jumpSlots = [...base, ["sprint drill", 3], ["plyometric", mesocycle >= 5 ? 3 : 2], ["Olympic lift", 1]];
+      if (this.allowsPowerBridge(mesocycle, schedule)) jumpSlots.push(["power movement", 1]);
+      return [...jumpSlots, ["accessory", 1]];
     }
     if (schedule.type === "strength") {
-      return [["joint prep", 2], ["mobility", 2], ["Olympic lift", 1], ["primary strength", 1], ["secondary strength", 1], ["accessory", 2]];
+      const strengthSlots = [["joint prep", 2], ["mobility", 2], ["Olympic lift", 1]];
+      if (this.allowsPowerBridge(mesocycle, schedule)) strengthSlots.push(["power movement", 1]);
+      return [...strengthSlots, ["primary strength", 1], ["secondary strength", 1], ["accessory", 2]];
     }
     if (schedule.type === "recovery") {
       return [["joint prep", 2], ["isometric", 2], ["mobility", 3], ["accessory", 3]];
@@ -607,10 +715,21 @@ export class ProgramPersonalizer {
     if (category === "plyometric") {
       candidates = this.prioritizeJumpRamp(candidates, mesocycle, schedule);
     }
+    if (category === "Olympic lift") {
+      candidates = this.prioritizeOlympicDerivatives(candidates, mesocycle, schedule);
+    }
     if (schedule.type === "strength") {
       candidates = this.prioritizeStrengthSupport(candidates, category, schedule);
     }
     return this.rotate(candidates.length ? candidates : library.filter((exercise) => exercise.category === category), count);
+  }
+
+  static allowsPowerBridge(mesocycle, schedule) {
+    if (schedule.type === "sport" || schedule.type === "recovery") return false;
+    if (schedule.intensity === "high" || schedule.jumpLoad === "high") return false;
+    if (mesocycle < 3 || mesocycle > 5) return false;
+    if (schedule.type === "jump") return mesocycle >= 4;
+    return true;
   }
 
   static prioritizeJumpRamp(candidates, mesocycle, schedule) {
@@ -630,10 +749,23 @@ export class ProgramPersonalizer {
     return items.slice(0, count);
   }
 
+  static prioritizeOlympicDerivatives(candidates, mesocycle, schedule) {
+    const earlyOrder = ["power clean", "hang clean", "clean pull", "high pull", "paused hang clean", "faster eccentric hang clean"];
+    const forceVelocityOrder = ["clean pull", "high pull", "paused hang clean", "faster eccentric hang clean", "hang clean", "power clean"];
+    const peakOrder = ["high pull", "faster eccentric hang clean", "clean pull", "hang clean", "power clean"];
+    const order = mesocycle >= 5 ? peakOrder : mesocycle >= 3 || schedule.offset === 4 ? forceVelocityOrder : earlyOrder;
+    return [...candidates].sort((a, b) => {
+      const aIndex = order.indexOf(a.name.toLowerCase());
+      const bIndex = order.indexOf(b.name.toLowerCase());
+      return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex);
+    });
+  }
+
   static prioritizeStrengthSupport(candidates, category, schedule) {
     if (schedule.offset !== 4) return candidates;
     const fridayOrder = {
-      "Olympic lift": ["clean pull", "hang clean", "faster eccentric hang clean", "power clean"],
+      "Olympic lift": ["clean pull", "high pull", "hang clean", "faster eccentric hang clean", "power clean"],
+      "power movement": ["loaded jump squat"],
       "primary strength": ["front squat", "trap bar deadlift", "back squat"],
       "secondary strength": ["hip thrust", "rdl", "split squat"],
       accessory: ["nordic eccentric", "single-leg calf raise", "hip abduction"]
@@ -646,9 +778,9 @@ export class ProgramPersonalizer {
     });
   }
 
-  static prescribe(exercise, { mesocycle, isDeload, index, schedule }) {
+  static prescribe(exercise, { mesocycle, isDeload, index, schedule, profile }) {
     const sets = this.setsFor(exercise, mesocycle, isDeload);
-    return new Exercise({
+    const prescribed = new Exercise({
       ...exercise.toJSON(),
       id: `p-${mesocycle}-${schedule.type}-${index}-${slug(exercise.name)}`,
       bucket: bucketForCategory(exercise.category),
@@ -657,6 +789,11 @@ export class ProgramPersonalizer {
       intensity: this.intensityFor(exercise, mesocycle, isDeload),
       completedSets: Array.from({ length: sets }, () => false)
     });
+    const recommendation = buildLoadRecommendation(prescribed, profile, { mesocycle, isDeload });
+    return new Exercise({
+      ...prescribed.toJSON(),
+      ...recommendation
+    });
   }
 
   static setsFor(exercise, mesocycle, isDeload) {
@@ -664,6 +801,7 @@ export class ProgramPersonalizer {
     if (exercise.category === "isometric") return 4;
     if (["warmup", "mobility", "joint prep"].includes(exercise.category)) return 1;
     if (exercise.category === "plyometric") return 1;
+    if (exercise.category === "power movement") return isDeload ? 2 : mesocycle >= 5 ? 2 : 3;
     if (mesocycle === 1) return Math.min(4, Math.max(2, exercise.sets || 3));
     if (mesocycle === 2) return 4;
     if (mesocycle <= 4) return 3;
@@ -673,6 +811,7 @@ export class ProgramPersonalizer {
   static repsFor(exercise, mesocycle, isDeload) {
     if (exercise.category === "isometric") return "45 sec";
     if (exercise.category === "plyometric") return "pain-guided ramp";
+    if (exercise.category === "power movement") return isDeload ? "2 easy" : "3 fast";
     if (isDeload) return exercise.category === "primary strength" ? "3 easy" : exercise.reps;
     if (["warmup", "mobility", "joint prep", "sprint drill"].includes(exercise.category)) return exercise.reps;
     if (mesocycle === 1) return exercise.reps === "listed" ? "8-12" : exercise.reps;
@@ -684,6 +823,12 @@ export class ProgramPersonalizer {
   static intensityFor(exercise, mesocycle, isDeload) {
     if (exercise.category === "isometric") return "mandatory if tendon pain; remove for PFP";
     if (exercise.category === "plyometric") return "1=no pain progress, 2=hold, 3=drop, 4+=stop";
+    if (exercise.category === "power movement") {
+      if (isDeload) return "10% squat max, crisp only";
+      if (mesocycle === 3) return "20% squat max";
+      if (mesocycle === 4) return "30% squat max";
+      return "20% squat max, preserve freshness";
+    }
     if (isDeload) return "easy, leave fresh";
     if (exercise.intensity && exercise.intensity !== "as written") return exercise.intensity;
     if (exercise.category === "primary strength") {
@@ -730,7 +875,7 @@ export class ProgramPersonalizer {
       return `${schedule.sport} counts as ${schedule.intensity} sport load and ${schedule.jumpLoad} jump load; support it without adding extra plyometrics.`;
     }
     if (schedule.type === "jump") return "Use the tendon pain guide to ramp from low-intensity contacts toward approach jumps only when pain allows.";
-    if (schedule.type === "strength") return "Build force and velocity qualities that support jumping without chasing lifting numbers.";
+    if (schedule.type === "strength") return "Blend squat strength, Olympic derivatives, and light loaded jumps so force transfers toward jump-specific power.";
     if (schedule.type === "gpp") return "Improve movement quality, tendon health, hip strength, foot strength, and recovery.";
     if (schedule.type === "recovery") return "Reduce symptoms and maintain tendon capacity with low fatigue.";
     if (mesocycle === 1) return "Build tissue capacity and a bilateral force base without provoking the right knee.";
@@ -745,6 +890,7 @@ export class ProgramPersonalizer {
     const names = exercises.map((exercise) => exercise.name.toLowerCase()).join(" ");
     if (schedule?.type === "sport" && schedule.jumpLoad === "high") flags.push(`${schedule.sport} already counts as jump exposure`);
     if (schedule?.type === "sport" && schedule.intensity === "medium") flags.push(`${schedule.sport} is moderate impact; avoid extra max jumping`);
+    if (/loaded jump squat/.test(names)) flags.push("Loaded jump squats require pain-free knees and crisp bar speed");
     if (/lunge|squat|bound|jump|cut|step/.test(names)) flags.push("Monitor right patellar tendon response");
     if (/sprint|skip|snatch|clean|high knee|hip/.test(names)) flags.push("Warm hips thoroughly before speed or catch positions");
     if (/right patellar|jumper/i.test(profile.constraints)) flags.push("No painful reps; substitute if knee pain climbs during session");
@@ -986,12 +1132,14 @@ export class SeedProgramFactory {
     ];
     const strengthA = [
       ["Power Clean", "Olympic lift", 5, "3", "technical-fast", "Rate of force development."],
+      ...(mesocycle >= 3 && mesocycle <= 5 ? [["Loaded Jump Squat", "power movement", mesocycle >= 5 ? 2 : 3, "3 fast", mesocycle === 4 ? "30% squat max" : "20% squat max", "Bridge squat force to jump-specific power; only pain-free."]] : []),
       ["Back Squat", "primary strength", 4, "3-5", "pain-free load", "Jump support work; do not chase numbers."],
       ["RDL", "secondary strength", 3, "6", "controlled", "Posterior-chain force support."],
       ["Single-Leg Calf Raise", "accessory", 3, "8/side", "full ROM", "Ankle stiffness and calf capacity."]
     ];
     const strengthB = [
-      ["Clean Pull", "Olympic lift", 4, "3", "fast", "High force pull without catch demand."],
+      [mesocycle >= 5 ? "High Pull" : "Clean Pull", "Olympic lift", 4, "3", "fast", "High force pull without catch demand."],
+      ...(mesocycle >= 3 && mesocycle <= 5 ? [["Loaded Jump Squat", "power movement", mesocycle >= 5 ? 2 : 3, "3 fast", mesocycle === 4 ? "30% squat max" : "20% squat max", "Light loaded jump expression after force work; stop if tendon pain rises."]] : []),
       ["Front Squat", "primary strength", 4, "3-5", "controlled", "Upright force production."],
       ["Hip Thrust", "secondary strength", 3, "6", "fast", "Hip extension force."],
       ["Nordic Eccentric", "accessory", 3, "5", "slow", "Hamstring resilience."]
@@ -1137,6 +1285,357 @@ export function tendonPainDecision({ tendonPain, isoReducedPain, sessionType }) 
   if (pain === 2) return { level: "hold", title: "Hold intensity", detail: "Stay at the same ramp level." };
   if (pain === 3) return { level: "caution", title: "Decrease intensity", detail: "Drop one ramp level and remain there for 3-5 jumps." };
   return { level: "stop", title: "Stop jumping", detail: "End the jump session and move to recovery work." };
+}
+
+export function exerciseWeightKey(name) {
+  return slug(name);
+}
+
+export function parseLoadPrescription(text, exerciseName = "") {
+  const raw = String(text || "").trim();
+  const lower = raw.toLowerCase();
+  if (!raw || lower === "as written") return null;
+
+  const absoluteRange = lower.match(/\b(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*(kg|kgs|lb|lbs)\b/);
+  if (absoluteRange) {
+    return {
+      type: "absolute-range",
+      min: Number(absoluteRange[1]),
+      max: Number(absoluteRange[2]),
+      unit: normalizeWeightUnit(absoluteRange[3]),
+      perHand: /\bdbs?\b|dumbbell/.test(lower),
+      raw
+    };
+  }
+
+  const absoluteSingle = lower.match(/\b(\d+(?:\.\d+)?)\s*(kg|kgs|lb|lbs)\b/);
+  if (absoluteSingle) {
+    return {
+      type: "absolute",
+      value: Number(absoluteSingle[1]),
+      unit: normalizeWeightUnit(absoluteSingle[2]),
+      perHand: /\bdbs?\b|dumbbell/.test(lower),
+      raw
+    };
+  }
+
+  const percentage = lower.match(/\b(\d+(?:\.\d+)?)\s*%/);
+  if (percentage) {
+    return {
+      type: "percentage",
+      percent: Number(percentage[1]),
+      maxKey: maxKeyFromText(lower, exerciseName),
+      appliesTo: appliesToFromText(lower),
+      raw
+    };
+  }
+
+  if (/same weight|heavier|lighter|work up|last week/.test(lower)) {
+    return {
+      type: "relative",
+      raw
+    };
+  }
+
+  return null;
+}
+
+export function buildLoadRecommendation(exercise, profile, context = {}) {
+  if (!shouldEstimateLoad(exercise)) return {};
+  const parsed = exercise.loadPrescription
+    ?? parseLoadPrescription(exercise.intensity, exercise.name)
+    ?? parseLoadPrescription(exercise.originalText, exercise.name)
+    ?? inferredCoachPrescription(exercise, context);
+  if (!parsed) return lastLoggedRecommendation(exercise, profile);
+
+  const missing = missingMaxMessage(parsed, profile);
+  if (missing) {
+    return {
+      loadPrescription: parsed,
+      recommendedWeightKg: null,
+      loadRecommendationLabel: missing,
+      loadRecommendationSource: "profile-max"
+    };
+  }
+
+  if (parsed.type === "percentage") {
+    const maxKg = Number(profile?.maxLifts?.[parsed.maxKey] || 0);
+    const kg = maxKg * (parsed.percent / 100);
+    return {
+      loadPrescription: parsed,
+      recommendedWeightKg: kg,
+      loadRecommendationLabel: recommendationLabelForPercentage(parsed, kg),
+      loadRecommendationSource: parsed.source ?? loadSourceFromPrescription(parsed)
+    };
+  }
+
+  if (parsed.type === "absolute") {
+    const kg = unitToKg(parsed.value, parsed.unit);
+    return {
+      loadPrescription: parsed,
+      recommendedWeightKg: kg,
+      loadRecommendationLabel: `${formatNumber(parsed.value)}${parsed.unit}${parsed.perHand ? " each hand" : ""}`,
+      loadRecommendationSource: "coach-import"
+    };
+  }
+
+  if (parsed.type === "absolute-range") {
+    const minKg = unitToKg(parsed.min, parsed.unit);
+    const maxKg = unitToKg(parsed.max, parsed.unit);
+    return {
+      loadPrescription: parsed,
+      recommendedWeightKg: maxKg,
+      loadRecommendationLabel: `${formatNumber(parsed.min)}-${formatNumber(parsed.max)}${parsed.unit}${parsed.perHand ? " each hand" : ""}`,
+      loadRecommendationSource: "coach-import",
+      recommendedWeightRangeKg: [minKg, maxKg]
+    };
+  }
+
+  return {
+    loadPrescription: parsed,
+    recommendedWeightKg: null,
+    loadRecommendationLabel: parsed.raw,
+    loadRecommendationSource: "coach-import"
+  };
+}
+
+export function displayWeightFromKg(kg, unit) {
+  const value = normalizeWeightUnit(unit) === "lb" ? Number(kg) * 2.2046226218 : Number(kg);
+  if (!Number.isFinite(value)) return "";
+  return Math.round(value * 10) / 10;
+}
+
+export function formatLoadRecommendation(exercise, profile, context = {}) {
+  const recommendation = buildLoadRecommendation(exercise, profile, context);
+  const source = recommendation.loadRecommendationSource || exercise.loadRecommendationSource;
+  const label = recommendation.loadRecommendationLabel || exercise.loadRecommendationLabel;
+  const prescription = recommendation.loadPrescription || exercise.loadPrescription;
+  const sourceSuffix = loadSourceSuffix(source);
+  if (!label && !prescription) return "";
+  if (recommendation.recommendedWeightRangeKg || exercise.recommendedWeightRangeKg) {
+    const [minKg, maxKg] = recommendation.recommendedWeightRangeKg || exercise.recommendedWeightRangeKg;
+    const min = displayWeightFromKg(minKg, profile.weightUnit);
+    const max = displayWeightFromKg(maxKg, profile.weightUnit);
+    return `Recommended: ${min}-${max}${profile.weightUnit.toUpperCase()}${prescription?.perHand ? " each hand" : ""}${sourceSuffix}`;
+  }
+  const kg = recommendation.recommendedWeightKg ?? exercise.recommendedWeightKg;
+  if (Number.isFinite(Number(kg)) && Number(kg) > 0 && prescription?.type === "percentage") {
+    return `Recommended: ${prescription.percent}% ${maxLiftLabel(prescription.maxKey)} = ${displayWeightFromKg(kg, profile.weightUnit)}${profile.weightUnit.toUpperCase()}${prescription.appliesTo ? ` (${prescription.appliesTo})` : ""}${sourceSuffix}`;
+  }
+  if (Number.isFinite(Number(kg)) && Number(kg) > 0) {
+    return `Recommended: ${displayWeightFromKg(kg, profile.weightUnit)}${profile.weightUnit.toUpperCase()}${prescription?.perHand ? " each hand" : ""}${sourceSuffix}`;
+  }
+  return source === "profile-max" ? label : `Recommendation note: ${label}`;
+}
+
+function shouldEstimateLoad(exercise) {
+  const category = String(exercise?.category || "").toLowerCase();
+  const name = String(exercise?.name || "").toLowerCase();
+  if (/joint|mobility|warmup|flexibility|isometric|sprint|plyometric/.test(category)) return false;
+  if (/pain rating|stretch|leg swing|pigeon|toe touch|ankle stretch/.test(name)) return false;
+  return /olympic|strength|power movement|accessory/.test(category)
+    || /squat|clean|snatch|pull|deadlift|rdl|lunge|split squat|hip thrust|calf raise|nordic|db|dumbbell|barbell|trap bar/.test(name);
+}
+
+function loadSourceFromPrescription(prescription) {
+  if (prescription.source) return prescription.source;
+  return /\bmax\b|coach-pattern|philosophy/i.test(prescription.raw || "") ? "profile-max" : "coach-import";
+}
+
+function loadSourceSuffix(source) {
+  if (source === "profile-max") return " (based on profile max)";
+  if (source === "last-logged") return " (based on last logged weight)";
+  if (source === "coach-import") return " (from coach note)";
+  return "";
+}
+
+function lastLoggedRecommendation(exercise, profile) {
+  const saved = profile?.exerciseWeights?.[exerciseWeightKey(exercise?.name)];
+  if (!saved?.kg) return {};
+  return {
+    loadPrescription: {
+      type: "last-logged",
+      raw: "last logged working weight"
+    },
+    recommendedWeightKg: saved.kg,
+    loadRecommendationLabel: "Use last logged working weight as the starting point.",
+    loadRecommendationSource: "last-logged"
+  };
+}
+
+function unitToKg(value, unit) {
+  return normalizeWeightUnit(unit) === "lb" ? Number(value) / 2.2046226218 : Number(value);
+}
+
+function normalizeWeightUnit(unit) {
+  return String(unit || "kg").toLowerCase().startsWith("lb") ? "lb" : "kg";
+}
+
+function maxKeyFromText(text, exerciseName) {
+  const combined = `${text} ${exerciseName}`.toLowerCase();
+  if (/\bpc\b|power clean/.test(combined)) return "powerClean";
+  if (/trap\s*bar/.test(combined)) return "trapBarDeadlift";
+  if (/deadlift/.test(combined)) return "deadlift";
+  if (/hip thrust/.test(combined)) return "hipThrust";
+  return "squat";
+}
+
+function appliesToFromText(text) {
+  const lastSets = text.match(/last\s+(\w+|\d+)\s+sets?/);
+  if (!lastSets) return "";
+  return `last ${lastSets[1]} sets`;
+}
+
+function missingMaxMessage(prescription, profile) {
+  if (prescription.type !== "percentage") return "";
+  const max = Number(profile?.maxLifts?.[prescription.maxKey] || 0);
+  return max > 0 ? "" : `Enter ${maxLiftLabel(prescription.maxKey)} max to calculate this recommendation.`;
+}
+
+function recommendationLabelForPercentage(prescription, kg) {
+  const appliesTo = prescription.appliesTo ? ` (${prescription.appliesTo})` : "";
+  return `${prescription.percent}% ${maxLiftLabel(prescription.maxKey)} = ${formatNumber(kg)}kg${appliesTo}`;
+}
+
+function inferredCoachPrescription(exercise, { mesocycle = 1, isDeload = false } = {}) {
+  const name = String(exercise?.name || "").toLowerCase();
+  if (/power clean/.test(name)) {
+    return {
+      type: "percentage",
+      percent: isDeload ? 50 : mesocycle <= 1 ? 60 : mesocycle === 2 ? 70 : mesocycle <= 4 ? 75 : 60,
+      maxKey: "powerClean",
+      appliesTo: "",
+      raw: "coach-pattern power clean wave",
+      source: "profile-max"
+    };
+  }
+  if (/hang clean/.test(name)) {
+    return {
+      type: "percentage",
+      percent: isDeload ? 45 : mesocycle <= 1 ? 55 : mesocycle === 2 ? 65 : mesocycle <= 4 ? 70 : 55,
+      maxKey: "powerClean",
+      appliesTo: "",
+      raw: "coach-pattern hang clean wave",
+      source: "profile-max"
+    };
+  }
+  if (/back squat|front squat|deep squat|barbell deep squat/.test(name)) {
+    return {
+      type: "percentage",
+      percent: isDeload ? 60 : mesocycle <= 1 ? 65 : mesocycle === 2 ? 70 : 75,
+      maxKey: "squat",
+      appliesTo: "",
+      raw: "coach-pattern squat wave",
+      source: "profile-max"
+    };
+  }
+  if (/trap bar deadlift/.test(name)) {
+    return {
+      type: "percentage",
+      percent: isDeload ? 55 : mesocycle <= 1 ? 65 : mesocycle === 2 ? 70 : 75,
+      maxKey: "trapBarDeadlift",
+      appliesTo: "",
+      raw: "coach-pattern trap bar deadlift wave",
+      source: "profile-max"
+    };
+  }
+  if (/\brdl\b|romanian deadlift/.test(name)) {
+    return {
+      type: "percentage",
+      percent: isDeload ? 40 : mesocycle <= 1 ? 50 : mesocycle === 2 ? 55 : 60,
+      maxKey: "deadlift",
+      appliesTo: "",
+      raw: "coach-pattern posterior-chain support wave",
+      source: "profile-max"
+    };
+  }
+  if (/hip thrust/.test(name)) {
+    return {
+      type: "percentage",
+      percent: isDeload ? 50 : mesocycle <= 1 ? 60 : mesocycle === 2 ? 70 : 75,
+      maxKey: "hipThrust",
+      appliesTo: "",
+      raw: "coach-pattern hip thrust wave",
+      source: "profile-max"
+    };
+  }
+  if (/split squat|walking lunge/.test(name)) {
+    return {
+      type: "percentage",
+      percent: isDeload ? 20 : mesocycle <= 1 ? 30 : mesocycle === 2 ? 35 : 40,
+      maxKey: "squat",
+      appliesTo: "",
+      raw: "coach-pattern unilateral support wave",
+      source: "profile-max"
+    };
+  }
+  if (/snatch pull/.test(name)) {
+    return {
+      type: "percentage",
+      percent: isDeload ? 45 : mesocycle <= 1 ? 50 : 55,
+      maxKey: "powerClean",
+      appliesTo: "",
+      raw: "coach-pattern snatch pull wave",
+      source: "profile-max"
+    };
+  }
+  if (/power snatch/.test(name)) {
+    return {
+      type: "percentage",
+      percent: isDeload ? 35 : mesocycle <= 1 ? 35 : mesocycle === 2 ? 40 : 45,
+      maxKey: "powerClean",
+      appliesTo: "",
+      raw: "coach-pattern power snatch wave",
+      source: "profile-max"
+    };
+  }
+  if (/clean pull/.test(name)) {
+    return {
+      type: "percentage",
+      percent: isDeload ? 80 : 90,
+      maxKey: "powerClean",
+      appliesTo: "",
+      raw: "coach-pattern clean pull wave",
+      source: "profile-max"
+    };
+  }
+  if (/high pull/.test(name)) {
+    return {
+      type: "percentage",
+      percent: isDeload ? 45 : mesocycle >= 5 ? 50 : 55,
+      maxKey: "powerClean",
+      appliesTo: "",
+      raw: "coach-pattern high pull wave",
+      source: "profile-max"
+    };
+  }
+  if (/loaded jump squat|jump squat/.test(name)) {
+    return {
+      type: "percentage",
+      percent: isDeload ? 10 : mesocycle === 4 ? 30 : 20,
+      maxKey: "squat",
+      appliesTo: "",
+      raw: "philosophy loaded jump squat bridge",
+      source: "profile-max"
+    };
+  }
+  return null;
+}
+
+function maxLiftLabel(key) {
+  const labels = {
+    squat: "squat max",
+    deadlift: "deadlift max",
+    trapBarDeadlift: "trap bar deadlift max",
+    powerClean: "Power Clean max",
+    hipThrust: "hip thrust max"
+  };
+  return labels[key] ?? `${key} max`;
+}
+
+function formatNumber(value) {
+  const rounded = Math.round(Number(value) * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }
 
 function bucketsFromExercises(exercises) {

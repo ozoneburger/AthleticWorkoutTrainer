@@ -1,0 +1,7 @@
+public/imported-workouts.json
+credentials.json
+token.json
+.env
+.env.*
+dist
+node_modules

@@ -7,10 +7,12 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
+    "check:loads": "node scripts/load-recommendation-check.js",
     "gmail:import": "node scripts/gmail-import.js"
   },
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",
+    "@supabase/supabase-js": "^2.106.2",
     "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^17.4.2",
     "googleapis": "^172.0.0",

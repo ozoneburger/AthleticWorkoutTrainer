@@ -8,3 +8,4 @@ credentials.json
 token.json
 data/imported-workouts.json
 public/imported-workouts.json
+.vercel
