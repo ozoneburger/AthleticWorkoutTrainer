@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "build": "cd \"Email workout scraper\" && npm install && npm run build && rm -f dist/imported-workouts.json && cd .. && rm -rf dist && cp -R \"Email workout scraper/dist\" dist"
+  }
+}
