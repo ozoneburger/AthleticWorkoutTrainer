@@ -11,7 +11,12 @@ export class SupabaseProgramRepository {
       this.localRepository.write("jump-profile-v1", remote);
       return remote;
     }
-    return this.localRepository.loadProfile();
+    const local = this.localRepository.loadProfile();
+    if (local) {
+      await this.upsert("profiles", { profile: local });
+      return local;
+    }
+    return null;
   }
 
   async saveProfile(profile) {
@@ -25,7 +30,12 @@ export class SupabaseProgramRepository {
       this.localRepository.write("jump-program-v1", remote);
       return remote;
     }
-    return this.localRepository.loadProgram();
+    const local = this.localRepository.loadProgram();
+    if (local) {
+      await this.upsert("programs", { program: local });
+      return local;
+    }
+    return null;
   }
 
   async saveProgram(program) {

@@ -483,13 +483,37 @@ function AuthView() {
         }
       })
       : supabase.auth.signInWithPassword({ email, password });
-    const { error } = await authCall;
+    const { data, error } = await authCall;
     setIsSending(false);
     if (error) {
       setMessage(error.message);
       return;
     }
-    setMessage(mode === "signup" ? "Account created. Check your email if confirmation is required." : "Signed in.");
+    if (mode === "signup") {
+      setMessage(data?.session
+        ? "Account created and signed in."
+        : "Confirmation email sent. Check inbox and spam, then sign in. If you already have an account, use Sign in.");
+      return;
+    }
+    setMessage("Signed in.");
+  }
+
+  async function resendConfirmation() {
+    if (!email) {
+      setMessage("Enter your email first.");
+      return;
+    }
+    setIsSending(true);
+    setMessage("");
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: {
+        emailRedirectTo: window.location.origin
+      }
+    });
+    setIsSending(false);
+    setMessage(error ? error.message : "Confirmation email resent. Check inbox and spam.");
   }
 
   async function sendMagicLink(event) {
@@ -563,6 +587,11 @@ function AuthView() {
         {mode === "password" && (
           <button type="button" className="text-button auth-reset" disabled={isSending} onClick={sendPasswordReset}>
             Forgot password?
+          </button>
+        )}
+        {mode === "signup" && (
+          <button type="button" className="text-button auth-reset" disabled={isSending} onClick={resendConfirmation}>
+            Resend confirmation email
           </button>
         )}
         {message && <div className="notice">{message}</div>}
